@@ -6,7 +6,7 @@ class TextToSpeech:
     def __init__(self, model="tts_models/multilingual/multi-dataset/xtts_v2"):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tts = TTS(model).to(self.device)
-        self.speak = self.save_david
+        self.speak = self.save_david  # Sets david as the default speaker
 
     def set_speaker(self, voice='David'):
         match voice:

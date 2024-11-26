@@ -71,7 +71,7 @@ with st.sidebar:
     # Enable audio capture button
     audio = audiorecorder("Click to send voice message", "Recording... Click when you're done", key="recorder")
 
-    st.title("Home Bot 1.0")
+    st.title("Home Bot 1.1")
     llm_model = st.selectbox("LLM", ["Qwen/Qwen2.5-1.5B-Instruct", "meta-llama/Llama-3.2-1B", "deepseek-ai/DeepSeek-V2.5"], index=0)
     image_model = st.selectbox("Images", ["stabilityai/stable-diffusion-2", "stabilityai/stable-diffusion-xl-base-1.0"], index=0)
     LLM_object = load_core_LLM(llm_model)
@@ -99,23 +99,20 @@ for message in st.session_state.messages:
 
 # React to user input
 if (prompt := st.chat_input("Your message")) or len(audio):
-    # If it's coming from the audio recorder transcribe the message with whisper.cpp
+    # If it's coming from the audio recorder transcribe
     if not prompt and len(audio)>0:
         prompt = transcription(audio)
 
-    # Display user message in chat message container
+    # Display user message in chat message container and add to chat history
     st.chat_message("user").markdown(prompt)
-    # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    # response = f"{prompt}"
+    # Pass prompt to the LLM coordinator and collect text response
     response = coordinator.run(prompt, LLM_object, **args)
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
         st.markdown(response['msg'])
         if voice:
-            # tts = TTS_object.speak(response, lang=lang)
-
             with NamedTemporaryFile(suffix=".wav") as temp:
                 tts = TTS_object.speak(response['msg'], temp.name)
                 # tts.save(temp.name)
@@ -125,7 +122,5 @@ if (prompt := st.chat_input("Your message")) or len(audio):
     history = {"role": "assistant", "content": response['msg']}
     if 'image' in response.keys():
         history['image'] = response['image']
-    st.session_state.messages.append(history)
-
-    if 'image' in response.keys():
         st.chat_message("assistant").image(response['image'], caption=prompt, use_container_width=True)
+    st.session_state.messages.append(history)

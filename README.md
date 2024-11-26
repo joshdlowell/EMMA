@@ -8,6 +8,17 @@ Follow me [@alonsosilva](https://twitter.com/alonsosilva)
 
 <a href="https://www.buymeacoffee.com/alonsosilva" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 
+# EMMA (Enhanced Multimodal Model Assistant)
+Enhanced: Because of the audio web interface
+Model: for the Local AI/LLM model
+Multimodal: For multiple model integration
+Assistant: for the interactive interface
+
+This is a project that I built for myself it is designed to run on a GPU with 8Gb Vram (or more).
+To achieve this, some models are unloaded to make room for others when space is required. This causes
+slower responses when calling functions that need different, larger, models and when returning to 
+"normal" operation afterward. I have attempted to limit the impact as much as possible
+
 # Install
 
 'pip install -r requirements.txt'

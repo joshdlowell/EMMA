@@ -11,7 +11,7 @@ class CoreLLM:
             device_map="auto"
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-        self.task_list = task_list
+        # self.task_list = task_list
 
         self.conversation_history = []
 

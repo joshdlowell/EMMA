@@ -1,4 +1,4 @@
-from NewTasks import image_generation
+from Tasks import image_generation
 
 task_list = [
     'Image Generation',
