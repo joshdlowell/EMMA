@@ -36,12 +36,6 @@ def get_temperature_date(location: str, date: str, unit: str = "celsius"):
     }
 
 
-def get_function_by_name(name):
-    if name == "get_current_temperature":
-        return get_current_temperature
-    if name == "get_temperature_date":
-        return get_temperature_date
-
 TOOLS = [
     {
         "type": "function",
@@ -91,8 +85,4 @@ TOOLS = [
             },
         },
     },
-]
-MESSAGES = [
-    {"role": "system", "content": "You are Qwen, created by Alibaba Cloud. You are a helpful assistant.\n\nCurrent Date: 2024-09-30"},
-    {"role": "user",  "content": "What's the temperature in San Francisco now? How about tomorrow?"},
 ]

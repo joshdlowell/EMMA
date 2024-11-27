@@ -2,55 +2,29 @@ import streamlit as st
 import base64
 from tempfile import NamedTemporaryFile
 from audiorecorder import audiorecorder
-import coordinator
-from Audio.listener import SpeechToText
-from Audio.speaker import TextToSpeech
-from Tasks.conversation import CoreLLM
+from coordinator import Coordinator
 
 
 @st.cache_resource
-def load_text_model(whisper_model) -> SpeechToText:
-    """Create and return a SpeechToText class object
-    :param whisper_model: a string of a valid whisper_model
-    :return: SpeechToText object initialized with the model selected
+def load_coordinator():
+    """Create and return a coordinator instance to control
+    prompt and response flow and management
+    :return: Coordinator object
     """
-    print("Loading Speech to Text models")
-    stt_obj = SpeechToText(whisper_model)
-    print("Speech to Text models loaded!")
-    return stt_obj
+    print("Creating coordinator")
+    coord = Coordinator()
+    print("Coordinator created!")
+    return coord
 
 
-@st.cache_resource
-def load_speech_model() -> TextToSpeech:
-    """Create and return a TextToSpeech class object
-    :return: TextToSpeech object initialized with the voice selected
+def set_models(coord):
+    """Create and return a coordinator instance to control
+    prompt and response flow and management
+    :return: Coordinator object
     """
-    print("Loading Text to Speech models")
-    tts_obj = TextToSpeech()
-    print("Text to Speech models loaded!")
-    return tts_obj
-
-
-@st.cache_resource
-def load_core_LLM(llm_model):
-    """Create and return a conversational LLM instance
-    :param llm_model: The name of a huggingFace model to use
-    :return: CoreLLM object initialized with the model selected
-    """
-    print("Loading Large Language models")
-    llm_obj = CoreLLM(coordinator.task_list, llm_model)
-    print("Large Language models loaded!")
-    return llm_obj
-
-
-def transcription(audio) -> str:
-    """Save audio to a file and return the text transcription
-    """
-    with NamedTemporaryFile(suffix=".wav") as temp:
-        audio.export(f"{temp.name}", format="wav")
-
-        text = STT_object.wav_to_text(f"{temp.name}")
-    return text
+    print("Loading models and settings selections")
+    coord.set_models()
+    print("Loading complete!")
 
 
 def audio_play(file_path: str) -> None:
@@ -68,25 +42,22 @@ def audio_play(file_path: str) -> None:
 
 # Begin Streamlit page code
 with st.sidebar:
+    # Get coordinator
+    coordinator = load_coordinator()
     # Enable audio capture button
     audio = audiorecorder("Click to send voice message", "Recording... Click when you're done", key="recorder")
-
     st.title("Home Bot 1.1")
-    llm_model = st.selectbox("LLM", ["Qwen/Qwen2.5-1.5B-Instruct", "meta-llama/Llama-3.2-1B", "deepseek-ai/DeepSeek-V2.5"], index=0)
-    image_model = st.selectbox("Images", ["stabilityai/stable-diffusion-2", "stabilityai/stable-diffusion-xl-base-1.0"], index=0)
-    LLM_object = load_core_LLM(llm_model)
-    precision = st.selectbox("STT Precision", ["whisper-tiny", "whisper-base", "whisper-small"], index=1)
-    STT_object = load_text_model(precision)
-    TTS_object = load_speech_model()
+    # Select models and settings
+    coordinator.llm_model_selection = st.selectbox("LLM", coordinator.available_llm_models, index=0)
+    coordinator.image_model_selection = st.selectbox("Images", coordinator.available_image_model, index=0)
+    coordinator.precision_selection = st.selectbox("STT Precision", coordinator.available_precision, index=1)
+    coordinator.voice_enabled = st.toggle('Voice', value=True)
+    coordinator.tts_selection = st.selectbox("TTS Model", coordinator.available_tts_models, index=0)
+    coordinator.speaker_selection = st.selectbox("Speaker", coordinator.available_speakers, index=0)
 
-    voice = st.toggle('Voice', value=True)
-    speaker = st.selectbox("Speaker", ["David", "Morgan", "Scarlett"])
-    TTS_object.set_speaker(speaker)
+    # Load the selected models and settings
+    set_models(coordinator)
 
-    args = {
-        'llm_model': llm_model,
-        'image_model': image_model
-    }
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -101,20 +72,20 @@ for message in st.session_state.messages:
 if (prompt := st.chat_input("Your message")) or len(audio):
     # If it's coming from the audio recorder transcribe
     if not prompt and len(audio)>0:
-        prompt = transcription(audio)
+        prompt = coordinator.stt_object.transcription(audio)
 
     # Display user message in chat message container and add to chat history
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
 
     # Pass prompt to the LLM coordinator and collect text response
-    response = coordinator.run(prompt, LLM_object, **args)
+    response = coordinator.run(prompt)
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
         st.markdown(response['msg'])
-        if voice:
+        if coordinator.voice_enabled:
             with NamedTemporaryFile(suffix=".wav") as temp:
-                tts = TTS_object.speak(response['msg'], temp.name)
+                tts = coordinator.tts_object.speak(response['msg'], temp.name)
                 # tts.save(temp.name)
                 audio_play(temp.name)
 

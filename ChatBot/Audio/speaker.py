@@ -2,13 +2,22 @@ import torch
 from TTS.api import TTS
 
 
-class TextToSpeech:
-    def __init__(self, model="tts_models/multilingual/multi-dataset/xtts_v2"):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.tts = TTS(model).to(self.device)
-        self.speak = self.save_david  # Sets david as the default speaker
+AVAILABLE_MODELS = ["tts_models/multilingual/multi-dataset/xtts_v2"]
+AVAILABLE_SPEAKERS = {
+    "tts_models/multilingual/multi-dataset/xtts_v2": ["David", "Morgan", "Scarlett"]
+}
 
-    def set_speaker(self, voice='David'):
+
+class TextToSpeech:
+    def __init__(self, model):
+        self.model = model
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.tts = TTS(self.model).to(self.device)
+        self.speak = None
+        self.speaker = None
+        self.set_speaker(AVAILABLE_SPEAKERS[self.model][0])  # sets
+
+    def set_speaker(self, voice):
         match voice:
             case "Morgan":
                 self.speak = self.save_morgan
@@ -16,6 +25,7 @@ class TextToSpeech:
                 self.speak = self.save_scarlett
             case "David" | _:
                 self.speak = self.save_david
+        self.speaker = voice
 
     # Text to speech to a wav array
     def speak_david(self, text, lang):
