@@ -1,4 +1,4 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, CodeAgent
 import torch
 
 class CoreLLM:
@@ -10,7 +10,17 @@ class CoreLLM:
             torch_dtype="auto",
             device_map="auto"
         )
+        # self.pipe = pipeline(
+        #     "text-generation",
+        #     self.model_name,
+        #     torch_dtype=torch.bfloat16,
+        #     device_map="auto",
+        # )
+
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
+
+
         # self.task_list = task_list
 
         self.conversation_history = []
@@ -67,3 +77,36 @@ class CoreLLM:
             device_map="auto"
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+
+system_prompt = """
+You will be given a task to solve as best you can.
+You have access to the following tools:
+<<tool_descriptions>>
+
+To solve the task, you must plan forward to proceed in a series of steps, in a cycle of 'Thought:', 'Code:', and 'Observation:' sequences.
+
+At each step, in the 'Thought:' sequence, you should first explain your reasoning towards solving the task, then the tools that you want to use.
+Then in the 'Code:' sequence, you should write the code in simple Python. The code sequence must end with '/End code' sequence.
+During each intermediate step, you can use 'print()' to save whatever important information you will then need.
+These print outputs will then be available in the 'Observation:' field, for using this information as input for the next step.
+
+In the end you have to return a final answer using the `final_answer` tool.
+
+Here are a few examples using notional tools:
+---
+{examples}
+
+Above example were using notional tools that might not exist for you. You only have access to those tools:
+<<tool_names>>
+And you can only use these imports:
+<<authorized_imports>>
+You also can perform computations in the python code you generate.
+
+Always provide a 'Thought:' and a 'Code:\n```py' sequence ending with '```<end_code>' sequence. You MUST provide at least the 'Code:' sequence to move forward.
+
+Remember to not perform too many operations in a single code block! You should split the task into intermediate code blocks.
+Print results at the end of each step to save the intermediate results. Then use final_answer() to return the final result.
+
+Remember to make sure that variables you use are all defined.
+
+Now Begin!"""
