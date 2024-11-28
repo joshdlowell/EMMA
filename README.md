@@ -21,6 +21,8 @@ slower responses when calling functions that need different, larger, models and 
 
 # Install
 
+## Install Nvidia drivers for your GPU
+
 'pip install -r requirements.txt'
 
 'python setup.py install'
@@ -28,3 +30,25 @@ slower responses when calling functions that need different, larger, models and 
 
 # Or run the docker containers
 
+with gpu
+install NVIDIA container toolkit
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
+verify GPUs are accessible from inside the container environment
+'docker run --gpus all nvidia/cuda:12.0-base nvidia-smi'
+
+'docker run --gpus all tensorflow/tensorflow:latest-gpu'
+
+to specify multiple containers use 'nvidia-smi' to identify your GPU device numbers and pass them as a comma
+separated list
+
+'docker run -it --rm --gpus '"device=0,2"' tensorflow/tensorflow:latest-gpu nvidia-smi'
+
+# TODO list
+
+1. Make audio playback quicker with partial generation
+2. Complete weather tools 
+3. Add image generation
+4. Add Timer tools
+5. Add home assistant integration
+6. Create Satellite for full assistant integration

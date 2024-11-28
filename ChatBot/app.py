@@ -1,5 +1,8 @@
+from queue import Queue
+from time import sleep
 import streamlit as st
 import base64
+import queue
 from tempfile import NamedTemporaryFile
 from audiorecorder import audiorecorder
 from coordinator import Coordinator
@@ -39,6 +42,25 @@ def audio_play(file_path: str) -> None:
         """
     st.markdown(markdown, unsafe_allow_html=True)
 
+def chunk_player(chunk_thread, wav_q) -> None:
+    """Wrap audio data for in-browser playback
+    """
+    data_fp, duration = wav_q.get()
+    while 'complete' != duration:
+        data = data_fp.read()
+        markdown = f"""
+            <audio controls autoplay="true">
+            <source src="data:audio/wav;base64,{base64.b64encode(data).decode()}" type="audio/wav">
+            </audio>
+            """
+        audio_bubble = st.markdown(markdown, unsafe_allow_html=True)
+        data_fp.close()
+        sleep(duration)
+        data_fp, duration = wav_q.get(block=True)
+        audio_bubble.empty()
+
+    chunk_thread.join()
+
 
 # Begin Streamlit page code
 with st.sidebar:
@@ -46,12 +68,14 @@ with st.sidebar:
     coordinator = load_coordinator()
     # Enable audio capture button
     audio = audiorecorder("Click to send voice message", "Recording... Click when you're done", key="recorder")
+
     st.title("Home Bot 1.1")
     # Select models and settings
     coordinator.llm_model_selection = st.selectbox("LLM", coordinator.available_llm_models, index=0)
     coordinator.image_model_selection = st.selectbox("Images", coordinator.available_image_model, index=0)
     coordinator.precision_selection = st.selectbox("STT Precision", coordinator.available_precision, index=1)
     coordinator.voice_enabled = st.toggle('Voice', value=True)
+    coordinator.quick_play = st.toggle('Quick play', value=True)
     coordinator.tts_selection = st.selectbox("TTS Model", coordinator.available_tts_models, index=0)
     coordinator.speaker_selection = st.selectbox("Speaker", coordinator.available_speakers, index=0)
 
@@ -84,10 +108,14 @@ if (prompt := st.chat_input("Your message")) or len(audio):
     with st.chat_message("assistant"):
         st.markdown(response['msg'])
         if coordinator.voice_enabled:
-            with NamedTemporaryFile(suffix=".wav") as temp:
-                tts = coordinator.tts_object.speak(response['msg'], temp.name)
-                # tts.save(temp.name)
-                audio_play(temp.name)
+            if coordinator.quick_play:
+                chunk_thread, wav_q = coordinator.tts_object.audio_chunker(response['msg'])
+                chunk_player(chunk_thread, wav_q)
+            else:
+                with NamedTemporaryFile(suffix=".wav") as temp:
+                    tts = coordinator.tts_object.speak(response['msg'], temp.name)
+                    # tts.save(temp.name)
+                    audio_play(temp.name)
 
     # Add assistant response to chat history
     history = {"role": "assistant", "content": response['msg']}

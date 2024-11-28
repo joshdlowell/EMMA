@@ -21,6 +21,7 @@ class Coordinator:
         self.available_speakers = speaker.AVAILABLE_SPEAKERS[speaker.AVAILABLE_MODELS[0]]
         self.speaker_selection = None
         self.voice_enabled = False
+        self.quick_play = True
         self.tts_object = None
 
         # On demand models
@@ -28,6 +29,7 @@ class Coordinator:
         self.image_model_selection = None
         self.image_object = None
 
+        # Conversation memory
         self.initial_prompt = [
                 {
                     "role":
@@ -93,3 +95,5 @@ class Coordinator:
     def message_maintenance(self):
         if len(self.messages) > 40:
             self.messages = self.messages[-40:]
+
+
