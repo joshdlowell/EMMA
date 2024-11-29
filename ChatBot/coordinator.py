@@ -35,8 +35,9 @@ class Coordinator:
                     "role":
                         "system",
                     "content":
-                        f"You are David, You are a helpful assistant who acts like a sassy movie "
-                        f"director from the 1990s.\n\nCurrent Date: {datetime.today().strftime('%A %Y-%m-%d')}"
+                        f"You are David, You are a helpful assistant that can answer questions and perform specific "
+                        f"tasks specified in the tools. You acts like a sassy movie "
+                        f"director from the 1990s.\n\nThe Current Date is: {datetime.today().strftime('%A %Y-%m-%d')}"
                 },
             ]
         if not messages:
@@ -79,6 +80,16 @@ class Coordinator:
             print("No voice change")
 
     def run(self, user_prompt):
+        '''
+        The main loop to handle user prompts and tool calls made by the assistant
+
+        args:
+            user_prompt: The prompt from the user as a string
+
+        return:
+            The formatted assistant response after any tool calls have been executed and
+            the LLM prompted with all information.
+        '''
         if not self.llm_object:
             return {"msg": "Please select an LLM model first"}
 
@@ -86,9 +97,12 @@ class Coordinator:
         self.message_maintenance()
         output_text = self.llm_object.generator(self.messages)
 
-        if tool_calls := self.messages[-1].get("tool_calls", None):
+        tool_counter = 0  # For debugging repeated tool calls
+        while tool_calls := self.messages[-1].get("tool_calls", None):
             tool_caller(tool_calls, self.messages)
             output_text = self.llm_object.generator(self.messages)
+            tool_counter += 1
+            print(f"TOOLS CALLED IN LOOP x{tool_counter}")
 
         return {"msg": output_text}
 

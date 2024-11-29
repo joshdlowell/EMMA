@@ -14,10 +14,19 @@ Model: for the Local AI/LLM model
 Multimodal: For multiple model integration
 Assistant: for the interactive interface
 
-This is a project that I built for myself it is designed to run on a GPU with 8Gb Vram (or more).
+This is a project that I built for myself it is designed to run on a GPU with 8Gb VRAM (or more).
 To achieve this, some models are unloaded to make room for others when space is required. This causes
 slower responses when calling functions that need different, larger, models and when returning to 
 "normal" operation afterward. I have attempted to limit the impact as much as possible
+
+# Tools
+
+## Weather tool
+The weather tool calls the [National Weather Service API](https://www.weather.gov/documentation/services-web-api)
+which provides weather forecast data for U.S. locations by grid coordinate.
+The tool takes the location by name, and performs a lookup for the grid coordinates in a local CSV downloaded from
+https://simplemaps.com/data/us-cities. I didn't want to use a web API for this. However, this implementation using
+NWS and us-cities data does limit the weather tool to U.S. locations.
 
 # Install
 
@@ -46,9 +55,11 @@ separated list
 
 # TODO list
 
-1. Make audio playback quicker with partial generation
-2. Complete weather tools 
-3. Add image generation
+1. Make audio playback quicker with partial generation - DONE
+2. Complete weather tools - Basic funcs DONE
+3. Add image generation - 
 4. Add Timer tools
-5. Add home assistant integration
-6. Create Satellite for full assistant integration
+5. Add interrupt capability button
+6. Add interrupt capability voice
+7. Add home assistant integration
+8. Create Satellite for full assistant integration

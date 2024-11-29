@@ -1,6 +1,39 @@
 import re
 import json
-from Tasks.temperature import get_current_temperature, get_temperature_date, TOOLS as TEMP_TOOLS
+from Tasks.temperature import get_current_weather, get_weather_date, TOOLS as TEMP_TOOLS
+from Tasks.date_converter import weekday_to_date, TOOLS as DATE_TOOLS
+
+
+def get_function_by_name(name):
+    '''
+    Convert tool call strings in to functions to be called
+
+    args:
+     name: the function name as a string
+
+    returns:
+        The function to be called
+    '''
+    if name == "get_current_weather":
+        return get_current_weather
+    if name == "get_weather_date":
+        return get_weather_date
+    if name == "weekday_to_date":
+        return weekday_to_date
+
+
+def get_tools_list():
+    '''
+    Builds a single list of available tools from each individual tool.py's TOOLS list
+
+    return:
+        tools: a list of all available tools
+    '''
+    tools = []
+    tools.extend(TEMP_TOOLS)
+    tools.extend(DATE_TOOLS)
+    return tools
+
 
 def try_parse_tool_calls(content: str):
     """Try parse the tool calls."""
@@ -27,6 +60,14 @@ def try_parse_tool_calls(content: str):
 
 
 def tool_caller(tool_calls, messages):
+    '''
+    execute the function calls based on the tools requested. Updates the given
+    messages inplace with the results
+
+    args:
+        tool_calls: a list of the tools to be called
+        messages: the history of messages for the instance calling the tools
+    '''
     for tool_call in tool_calls:
         if fn_call := tool_call.get("function"):
             fn_name: str = fn_call["name"]
@@ -39,16 +80,3 @@ def tool_caller(tool_calls, messages):
                 "name": fn_name,
                 "content": fn_res,
             })
-
-
-def get_function_by_name(name):
-    if name == "get_current_temperature":
-        return get_current_temperature
-    if name == "get_temperature_date":
-        return get_temperature_date
-
-
-def get_tools_list():
-    tools = TEMP_TOOLS
-
-    return tools
