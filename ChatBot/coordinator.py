@@ -35,8 +35,8 @@ class Coordinator:
                     "role":
                         "system",
                     "content":
-                        f"You are Qwen, You are a helpful assistant who acts like a sassy movie "
-                        f"director from the 1980s.\n\nCurrent Date: {datetime.today().strftime('%Y-%m-%d')}"
+                        f"You are David, You are a helpful assistant who acts like a sassy movie "
+                        f"director from the 1990s.\n\nCurrent Date: {datetime.today().strftime('%A %Y-%m-%d')}"
                 },
             ]
         if not messages:
