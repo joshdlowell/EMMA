@@ -13,7 +13,7 @@ class CoreLLM:
                 self.model_name,
                 torch_dtype="auto",
                 device_map="auto"
-            )
+            ).to(self.device)
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
 
     def generator(self, messages):

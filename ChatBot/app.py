@@ -2,7 +2,6 @@ from queue import Queue
 from time import sleep
 import streamlit as st
 import base64
-import queue
 from tempfile import NamedTemporaryFile
 from audiorecorder import audiorecorder
 from coordinator import Coordinator
@@ -121,5 +120,9 @@ if (prompt := st.chat_input("Your message")) or len(audio):
     history = {"role": "assistant", "content": response['msg']}
     if 'image' in response.keys():
         history['image'] = response['image']
-        st.chat_message("assistant").image(response['image'], caption=prompt, use_container_width=True)
+        try:
+            caption = response['msg'].split("-")[1]
+        except IndexError as e:
+            caption = prompt
+        st.chat_message("assistant").image(response['image'], caption=caption, use_container_width=True)
     st.session_state.messages.append(history)

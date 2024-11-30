@@ -57,7 +57,7 @@ separated list
 
 1. Make audio playback quicker with partial generation - DONE
 2. Complete weather tools - Basic funcs DONE
-3. Add image generation - 
+3. Add image generation - Done
 4. Add Timer tools
 5. Add interrupt capability button
 6. Add interrupt capability voice

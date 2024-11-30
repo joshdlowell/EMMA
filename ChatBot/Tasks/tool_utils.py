@@ -2,6 +2,7 @@ import re
 import json
 from Tasks.temperature import get_current_weather, get_weather_date, TOOLS as TEMP_TOOLS
 from Tasks.date_converter import weekday_to_date, TOOLS as DATE_TOOLS
+from Tasks.image_generation import image_generator, TOOLS as IMAGE_TOOLS
 
 
 def get_function_by_name(name):
@@ -20,6 +21,8 @@ def get_function_by_name(name):
         return get_weather_date
     if name == "weekday_to_date":
         return weekday_to_date
+    if name == "image_generator":
+        return image_generator  # Calls func on instance of coordinator
 
 
 def get_tools_list():
@@ -32,6 +35,7 @@ def get_tools_list():
     tools = []
     tools.extend(TEMP_TOOLS)
     tools.extend(DATE_TOOLS)
+    tools.extend(IMAGE_TOOLS)
     return tools
 
 
@@ -59,7 +63,7 @@ def try_parse_tool_calls(content: str):
     return {"role": "assistant", "content": re.sub(r"|<\|im_end\|>|$", "", content)}
 
 
-def tool_caller(tool_calls, messages):
+def tool_caller(tool_calls, messages, coordinator):
     '''
     execute the function calls based on the tools requested. Updates the given
     messages inplace with the results
@@ -72,11 +76,43 @@ def tool_caller(tool_calls, messages):
         if fn_call := tool_call.get("function"):
             fn_name: str = fn_call["name"]
             fn_args: dict = fn_call["arguments"]
-
-            fn_res: str = json.dumps(get_function_by_name(fn_name)(**fn_args))
-
-            messages.append({
-                "role": "tool",
-                "name": fn_name,
-                "content": fn_res,
+            if fn_name == 'image_generator':
+                offload_llm(coordinator)  # Make space on the GPU
+                response, image = get_function_by_name(fn_name)(**fn_args)
+                fn_res: str = json.dumps(response)
+                llm_to_gpu(coordinator)  # Restore LLM to GPU
+                messages.append({
+                    "role": "tool",
+                    "name": fn_name,
+                    "content": fn_res,
+                    "image": image
+                })
+            else:
+                fn_res: str = json.dumps(get_function_by_name(fn_name)(**fn_args))
+                messages.append({
+                    "role": "tool",
+                    "name": fn_name,
+                    "content": fn_res,
             })
+
+
+def offload_llm(coordinator_object):
+    """
+    Function to move the core LLM to the cpu to free up space
+
+    args:
+     coordinator_object: the coordinator object that hold the llm instance
+    """
+    llm_object = coordinator_object.llm_object
+    llm_object.model = llm_object.model.to('cpu')  # Remove the llm model from the GPU
+
+
+def llm_to_gpu(coordinator_object):
+    """
+    Function to move the core LLM to the gpu for improved performance
+
+    args:
+     coordinator_object: the coordinator object that hold the llm instance
+    """
+    llm_object = coordinator_object.llm_object
+    llm_object.model = llm_object.model.to(llm_object.device)  # Restore the llm model to the GPU
