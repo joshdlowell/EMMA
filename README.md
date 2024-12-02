@@ -59,7 +59,7 @@ separated list
 2. Complete weather tools - Basic funcs DONE
 3. Add image generation - Done
 4. Add Timer tools
-5. Add interrupt capability button
-6. Add interrupt capability voice
-7. Add home assistant integration
+5.  Add home assistant integration - Basic funcs DONE
+6. Add interrupt capability button
+7. Add interrupt capability voice
 8. Create Satellite for full assistant integration

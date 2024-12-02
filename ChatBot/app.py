@@ -29,7 +29,7 @@ def set_models(coord):
     print("Loading complete!")
 
 
-def audio_play(file_path: str) -> None:
+def continuous_player(file_path: str) -> None:
     """Wrap audio data for in-browser playback
     """
     with open(file_path, "rb") as f:
@@ -90,6 +90,8 @@ if "messages" not in st.session_state:
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        if message.get('image', None):
+            st.image(message['image'], caption=message['caption'], use_container_width=True)
 
 # React to user input
 if (prompt := st.chat_input("Your message")) or len(audio):
@@ -106,6 +108,12 @@ if (prompt := st.chat_input("Your message")) or len(audio):
     # Display assistant response in chat message container
     with st.chat_message("assistant"):
         st.markdown(response['msg'])
+        if 'image' in response.keys():
+            try:
+                caption = response['msg'].split("-")[1]
+            except IndexError as e:
+                caption = prompt
+            st.image(response['image'], caption=caption, use_container_width=True)
         if coordinator.voice_enabled:
             if coordinator.quick_play:
                 chunk_thread, wav_q = coordinator.tts_object.audio_chunker(response['msg'])
@@ -114,15 +122,11 @@ if (prompt := st.chat_input("Your message")) or len(audio):
                 with NamedTemporaryFile(suffix=".wav") as temp:
                     tts = coordinator.tts_object.speak(response['msg'], temp.name)
                     # tts.save(temp.name)
-                    audio_play(temp.name)
+                    continuous_player(temp.name)
 
     # Add assistant response to chat history
     history = {"role": "assistant", "content": response['msg']}
     if 'image' in response.keys():
         history['image'] = response['image']
-        try:
-            caption = response['msg'].split("-")[1]
-        except IndexError as e:
-            caption = prompt
-        st.chat_message("assistant").image(response['image'], caption=caption, use_container_width=True)
+        history['caption'] = caption
     st.session_state.messages.append(history)

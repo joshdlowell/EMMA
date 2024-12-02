@@ -3,6 +3,7 @@ import json
 from Tasks.temperature import get_current_weather, get_weather_date, TOOLS as TEMP_TOOLS
 from Tasks.date_converter import weekday_to_date, TOOLS as DATE_TOOLS
 from Tasks.image_generation import image_generator, TOOLS as IMAGE_TOOLS
+from Tasks.home_assistant import control_smart_home_device, TOOLS as HA_TOOLS
 
 
 def get_function_by_name(name):
@@ -22,7 +23,9 @@ def get_function_by_name(name):
     if name == "weekday_to_date":
         return weekday_to_date
     if name == "image_generator":
-        return image_generator  # Calls func on instance of coordinator
+        return image_generator
+    if name == "control_smart_home_device":
+        return control_smart_home_device
 
 
 def get_tools_list():
@@ -36,6 +39,7 @@ def get_tools_list():
     tools.extend(TEMP_TOOLS)
     tools.extend(DATE_TOOLS)
     tools.extend(IMAGE_TOOLS)
+    tools.extend(HA_TOOLS)
     return tools
 
 
@@ -88,6 +92,7 @@ def tool_caller(tool_calls, messages, coordinator):
                     "image": image
                 })
             else:
+                print(f"THE CALLED FN: {fn_name}")
                 fn_res: str = json.dumps(get_function_by_name(fn_name)(**fn_args))
                 messages.append({
                     "role": "tool",
