@@ -1,12 +1,14 @@
 from datetime import datetime
+from tempfile import NamedTemporaryFile
+
 from Tasks.tool_utils import tool_caller
-from Tasks import core_tools_llm
+from Tasks import core_tools_llm, timers
 from Tasks.home_assistant import get_device_status
 from Audio import listener, speaker
 
 
 class Coordinator:
-    def __init__(self, messages=None):
+    def __init__(self, player_callback, streamlit_ctx, streamlit_add_ctx, messages=None):
         # Always on models
         self.available_llm_models = core_tools_llm.AVAILABLE_MODELS
         self.llm_model_selection = None
@@ -28,6 +30,19 @@ class Coordinator:
         self.available_image_model = ["stabilityai/stable-diffusion-2", "stabilityai/stable-diffusion-xl-base-1.0"]
         self.image_model_selection = None
         self.image_object = None
+
+        # Threadding interrupt tracking
+        self.speak_lock = 0  # using approach to increment and check value to defeat race conditions
+        self.streamlit_ctx = streamlit_ctx
+        self.streamlit_add_ctx = streamlit_add_ctx
+
+        # Timer integration
+        self.pending_interrupt = False
+        self.interrupt_file = None
+        # Capture the callback for the streamlit audioplayer
+        self.player_callback = player_callback
+        # Create a timer object and give the callback for the coordinator
+        self.timers = timers.Timers(self.audio_file_generator, self.streamlit_ctx, self.streamlit_add_ctx)
 
         # Conversation memory
         self.initial_prompt = [
@@ -116,6 +131,15 @@ class Coordinator:
                 return_dict["msg"] = self.llm_object.generator(self.messages)
 
         return return_dict
+
+    def audio_file_generator(self, text, alert_sound=None):
+        with NamedTemporaryFile(suffix=".wav") as temp:
+            self.tts_object.speak(text, temp.name)
+            if alert_sound:
+                self.player_callback([alert_sound, temp.name])
+            else:
+                print("calling main player")
+                self.player_callback(temp.name)
 
     def message_maintenance(self):
         """

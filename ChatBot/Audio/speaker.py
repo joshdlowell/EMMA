@@ -91,13 +91,16 @@ class TextToSpeech:
             with NamedTemporaryFile(suffix=".wav") as temp:
                 # Generate audio using objects set speaker voice
                 self.speak(chunk, temp.name)
-                with wave.open(temp.name, 'rb') as wav:
-                    # Determine the length of the audio clip for playback management
-                    length = round(wav.getnframes() / float(wav.getframerate()), 2)  # in 0.00 seconds format
                 # Add file pointer and audio duration to playback queue as a tuple
-                wav_q.put((open(temp.name, 'rb'), length))
+                wav_q.put((open(temp.name, 'rb'), self.file_duration(temp.name)))
         # Add indicator that all clips have been added to queue
         wav_q.put(("complete", "complete"))
+
+    def file_duration(self, file_name) -> float:
+        with wave.open(file_name, 'rb') as wav:
+            # Determine the length of the audio clip for playback management
+            length = round(wav.getnframes() / float(wav.getframerate()), 2)  # in 0.00 seconds format
+        return length
 
     def speak_cleaner(self, text) -> str:
         '''

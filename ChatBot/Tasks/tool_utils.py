@@ -4,9 +4,10 @@ from Tasks.temperature import get_current_weather, get_weather_date, TOOLS as TE
 from Tasks.date_converter import weekday_to_date, TOOLS as DATE_TOOLS
 from Tasks.image_generation import image_generator, TOOLS as IMAGE_TOOLS
 from Tasks.home_assistant import control_smart_home_device, TOOLS as HA_TOOLS
+from Tasks.timers import TOOLS as TIMER_TOOLS
 
 
-def get_function_by_name(name):
+def get_function_by_name(name, coordinator):
     '''
     Convert tool call strings in to functions to be called
 
@@ -26,6 +27,14 @@ def get_function_by_name(name):
         return image_generator
     if name == "control_smart_home_device":
         return control_smart_home_device
+    if name == "set_timer":
+        return coordinator.timers.set_timer
+    if name == "get_timers":
+        return coordinator.timers.get_timers
+    if name == "check_timer":
+        return coordinator.timers.check_timer
+    if name == "cancel_timer":
+        return coordinator.timers.cancel_timer
 
 
 def get_tools_list():
@@ -40,6 +49,7 @@ def get_tools_list():
     tools.extend(DATE_TOOLS)
     tools.extend(IMAGE_TOOLS)
     tools.extend(HA_TOOLS)
+    tools.extend(TIMER_TOOLS)
     return tools
 
 
@@ -82,7 +92,7 @@ def tool_caller(tool_calls, messages, coordinator):
             fn_args: dict = fn_call["arguments"]
             if fn_name == 'image_generator':
                 offload_llm(coordinator)  # Make space on the GPU
-                response, image = get_function_by_name(fn_name)(**fn_args)
+                response, image = get_function_by_name(fn_name, coordinator)(**fn_args)
                 fn_res: str = json.dumps(response)
                 llm_to_gpu(coordinator)  # Restore LLM to GPU
                 messages.append({
@@ -93,7 +103,7 @@ def tool_caller(tool_calls, messages, coordinator):
                 })
             else:
                 print(f"THE CALLED FN: {fn_name}")
-                fn_res: str = json.dumps(get_function_by_name(fn_name)(**fn_args))
+                fn_res: str = json.dumps(get_function_by_name(fn_name, coordinator)(**fn_args))
                 messages.append({
                     "role": "tool",
                     "name": fn_name,

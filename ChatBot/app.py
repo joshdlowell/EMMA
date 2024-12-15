@@ -2,6 +2,7 @@ from queue import Queue
 from time import sleep
 import streamlit as st
 import base64
+from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
 from tempfile import NamedTemporaryFile
 from audiorecorder import audiorecorder
 from coordinator import Coordinator
@@ -14,38 +15,60 @@ def load_coordinator():
     :return: Coordinator object
     """
     print("Creating coordinator")
-    coord = Coordinator()
+
+    add_to = add_script_run_ctx
+    coord = Coordinator(callback_player, ctx, add_to)
     print("Coordinator created!")
     return coord
 
 
-def set_models(coord):
+def set_models():
     """Create and return a coordinator instance to control
     prompt and response flow and management
     :return: Coordinator object
     """
     print("Loading models and settings selections")
-    coord.set_models()
+    coordinator.set_models()
     print("Loading complete!")
 
+@st.cache_resource
+def callback_player(file):
+    coordinator.speak_lock += 1
+    print("callback app")
+    if coordinator.speak_lock > 1:
+        coordinator.interrupt_file = file
+        coordinator.pending_interrupt = True
+    else:
+        continuous_player(file)
+    coordinator.speak_lock -= 1
 
-def continuous_player(file_path: str) -> None:
+def continuous_player(file_path: str | list) -> None:
     """Wrap audio data for in-browser playback
     """
-    with open(file_path, "rb") as f:
-        data = f.read()
-    markdown = f"""
-        <audio controls autoplay="true">
-        <source src="data:audio/wav;base64,{base64.b64encode(data).decode()}" type="audio/wav">
-        </audio>
-        """
-    st.markdown(markdown, unsafe_allow_html=True)
+    if isinstance(file_path, str):
+        file_path = [file_path]
+    for file in file_path:
+        with open(file, "rb") as f:
+            data = f.read()
+        markdown = f"""
+            <audio controls autoplay="true">
+            <source src="data:audio/wav;base64,{base64.b64encode(data).decode()}" type="audio/wav">
+            </audio>
+            """
+        audio_bubble = st.markdown(markdown, unsafe_allow_html=True)
+        sleep(coordinator.tts_object.file_duration(file))
+        audio_bubble.empty()
+
 
 def chunk_player(chunk_thread, wav_q) -> None:
     """Wrap audio data for in-browser playback
     """
     data_fp, duration = wav_q.get()
     while 'complete' != duration:
+        if coordinator.pending_interrupt:
+            continuous_player(coordinator.interrupt_file)
+            coordinator.pending_interrupt = False
+            sleep(2)
         data = data_fp.read()
         markdown = f"""
             <audio controls autoplay="true">
@@ -62,6 +85,7 @@ def chunk_player(chunk_thread, wav_q) -> None:
 
 
 # Begin Streamlit page code
+ctx = get_script_run_ctx()
 with st.sidebar:
     # Get coordinator
     coordinator = load_coordinator()
@@ -79,7 +103,7 @@ with st.sidebar:
     coordinator.speaker_selection = st.selectbox("Speaker", coordinator.available_speakers, index=0)
 
     # Load the selected models and settings
-    set_models(coordinator)
+    set_models()
 
 
 # Initialize chat history
@@ -115,14 +139,24 @@ if (prompt := st.chat_input("Your message")) or len(audio):
                 caption = prompt
             st.image(response['image'], caption=caption, use_container_width=True)
         if coordinator.voice_enabled:
+            while True:
+                coordinator.speak_lock += 1
+                if coordinator.speak_lock != 1:
+                    coordinator.speak_lock -= 1
+                    sleep(2)
+                else:
+                    break
             if coordinator.quick_play:
                 chunk_thread, wav_q = coordinator.tts_object.audio_chunker(response['msg'])
+                add_script_run_ctx(chunk_thread, ctx)
                 chunk_player(chunk_thread, wav_q)
             else:
                 with NamedTemporaryFile(suffix=".wav") as temp:
                     tts = coordinator.tts_object.speak(response['msg'], temp.name)
                     # tts.save(temp.name)
                     continuous_player(temp.name)
+
+            coordinator.speak_lock -= 1
 
     # Add assistant response to chat history
     history = {"role": "assistant", "content": response['msg']}
